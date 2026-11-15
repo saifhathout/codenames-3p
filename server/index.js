@@ -2,23 +2,24 @@ import express from 'express';
 import http from 'http';
 import { Server } from 'socket.io';
 import cors from 'cors';
-import { registerSocketHandlers } from './transport/socketHandlers.js';
 
 const app = express();
-app.use(cors()); // مهم عشان Vercel
+app.use(cors({ origin: process.env.FRONTEND_URL || '*' }));
+
+// مسار بسيط للتأكد من أن السيرفر يعمل
+app.get('/', (req, res) => {
+  res.json({ ok: true, message: 'Codenames server is running!' });
+});
 
 const httpServer = http.createServer(app);
 const io = new Server(httpServer, {
-  cors: {
-    origin: process.env.FRONTEND_URL || '*', // رابط الفرونت على Vercel
-    methods: ['GET', 'POST'],
-  },
-  // Vercel محتاجة WebSocket صريح عشان تتخطى مشكلة الـ Sticky Sessions
+  cors: { origin: process.env.FRONTEND_URL || '*' },
+  // مهم جداً على Vercel: إجبار استخدام WebSocket فقط
   transports: ['websocket'], 
 });
 
-// صحّح المسار لو ملفاتك في مجلد تاني
-registerSocketHandlers(io);
+// ... (كود Socket.IO handlers الخاص بك) ...
 
-// بدل httpServer.listen(PORT, ...)
+// لا تستخدم httpServer.listen() أبداً على Vercel
+// صدّر السيرفر كـ default export
 export default httpServer;
