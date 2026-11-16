@@ -56,8 +56,12 @@ const io = new Server(httpServer, {
   pingInterval: 25000,
 });
 
-registerSocketHandlers(io);
-
+try {
+  registerSocketHandlers(io);
+} catch (err) {
+  console.error('🔴 registerSocketHandlers failed:', err);
+  process.exit(1);
+}
 
 console.log('Railway injected PORT:', process.env.PORT);
 
