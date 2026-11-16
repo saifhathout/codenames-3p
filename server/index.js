@@ -56,25 +56,39 @@ const io = new Server(httpServer, {
   pingInterval: 25000,
 });
 
+console.log('STEP 1: Server initialized');
+
 try {
+  console.log('STEP 2: Registering socket handlers');
+
   registerSocketHandlers(io);
+
+  console.log('STEP 3: Socket handlers registered');
 } catch (err) {
-  console.error('🔴 registerSocketHandlers failed:', err);
+  console.error('SOCKET HANDLERS ERROR:', err);
   process.exit(1);
 }
+
+console.log('STEP 4: Starting HTTP server');
+
+const port = process.env.PORT || 3001;
+
+httpServer.listen(port, '0.0.0.0', () => {
+  console.log(`SERVER RUNNING ON PORT ${port}`);
+});
 
 console.log('Railway injected PORT:', process.env.PORT);
 
 // ---- Listen (Railway requires 0.0.0.0 and process.env.PORT) ----
-const port = process.env.PORT || 3001;
-httpServer.listen(port, '0.0.0.0', () => {
-  console.log(`✅ Codenames server listening on 0.0.0.0:${port}`);
-  console.log(`   CORS origins: ${allowedOrigins === '*' ? '* (open)' : allowedOrigins.join(', ')}`);
-  console.log(`   NODE_ENV: ${process.env.NODE_ENV || 'development'}`);
-});
+// const port = process.env.PORT || 3001;
+// httpServer.listen(port, '0.0.0.0', () => {
+//   console.log(`✅ Codenames server listening on 0.0.0.0:${port}`);
+//   console.log(`   CORS origins: ${allowedOrigins === '*' ? '* (open)' : allowedOrigins.join(', ')}`);
+//   console.log(`   NODE_ENV: ${process.env.NODE_ENV || 'development'}`);
+// });
 
-// Graceful shutdown (Railway sends SIGTERM on redeploy)
-process.on('SIGTERM', () => {
-  console.log('SIGTERM received — closing server...');
-  httpServer.close(() => process.exit(0));
-});
+// // Graceful shutdown (Railway sends SIGTERM on redeploy)
+// process.on('SIGTERM', () => {
+//   console.log('SIGTERM received — closing server...');
+//   httpServer.close(() => process.exit(0));
+// });
