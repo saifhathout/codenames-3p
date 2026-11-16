@@ -2,24 +2,27 @@ import express from 'express';
 import http from 'http';
 import { Server } from 'socket.io';
 import cors from 'cors';
+import { registerSocketHandlers } from './transport/socketHandlers.js';
 
 const app = express();
 app.use(cors({ origin: process.env.FRONTEND_URL || '*' }));
 
-// مسار بسيط للتأكد من أن السيرفر يعمل
+// مسار بسيط عشان تتأكد إن السيرفر شغال
 app.get('/', (req, res) => {
-  res.json({ ok: true, message: 'Codenames server is running!' });
+  res.json({ ok: true, message: 'Codenames server running' });
 });
 
 const httpServer = http.createServer(app);
+
 const io = new Server(httpServer, {
-  cors: { origin: process.env.FRONTEND_URL || '*' },
-  // مهم جداً على Vercel: إجبار استخدام WebSocket فقط
-  transports: ['websocket'], 
+  transports: ['websocket'],   // ← مهم جداً على Vercel
+  cors: {
+    origin: process.env.FRONTEND_URL || '*',
+    methods: ['GET', 'POST'],
+  },
 });
 
-// ... (كود Socket.IO handlers الخاص بك) ...
+registerSocketHandlers(io);
 
-// لا تستخدم httpServer.listen() أبداً على Vercel
-// صدّر السيرفر كـ default export
+// ⚠️ لا تكتب httpServer.listen(...) خالص
 export default httpServer;
