@@ -2,27 +2,75 @@ import express from 'express';
 import http from 'http';
 import { Server } from 'socket.io';
 import cors from 'cors';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { registerSocketHandlers } from './transport/socketHandlers.js';
 
-const app = express();
-app.use(cors({ origin: process.env.FRONTEND_URL || '*' }));
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-// مسار بسيط عشان تتأكد إن السيرفر شغال
-app.get('/', (req, res) => {
-  res.json({ ok: true, message: 'Codenames server running' });
+const app = express();
+
+// ---- CORS ----
+const rawOrigins = process.env.FRONTEND_URL || '*';
+const allowedOrigins = rawOrigins === '*'
+  ? '*'
+  : rawOrigins.split(',').map(s => s.trim()).filter(Boolean);
+
+app.use(cors({
+  origin: allowedOrigins,
+  credentials: true,
+}));
+
+// ---- Health check ----
+app.get('/health', (_req, res) => {
+  res.json({ ok: true, service: 'codenames-server', timestamp: Date.now() });
 });
 
+// ---- Root (optional, for browser check) ----
+app.get('/', (_req, res) => {
+  res.json({ ok: true, message: 'Codenames server is running' });
+});
+
+// ---- Static files (only useful if serving client from same container) ----
+const clientDist = path.join(__dirname, '../client/dist');
+app.use(express.static(clientDist));
+
+// SPA fallback — skip /socket.io and /health
+app.get(/^\/(?!socket\.io|health).*/, (req, res, next) => {
+  res.sendFile(path.join(clientDist, 'index.html'), (err) => {
+    if (err) next();
+  });
+});
+
+// ---- HTTP + Socket.IO ----
 const httpServer = http.createServer(app);
 
 const io = new Server(httpServer, {
-  transports: ['websocket'],   // ← مهم جداً على Vercel
   cors: {
-    origin: process.env.FRONTEND_URL || '*',
+    origin: allowedOrigins,
     methods: ['GET', 'POST'],
+    credentials: true,
   },
+  transports: ['polling', 'websocket'],
+  pingTimeout: 60000,
+  pingInterval: 25000,
 });
 
 registerSocketHandlers(io);
 
-// ⚠️ لا تكتب httpServer.listen(...) خالص
-export default httpServer;
+
+console.log('Railway injected PORT:', process.env.PORT);
+
+// ---- Listen (Railway requires 0.0.0.0 and process.env.PORT) ----
+const port = process.env.PORT || 3001;
+httpServer.listen(port, '0.0.0.0', () => {
+  console.log(`✅ Codenames server listening on 0.0.0.0:${port}`);
+  console.log(`   CORS origins: ${allowedOrigins === '*' ? '* (open)' : allowedOrigins.join(', ')}`);
+  console.log(`   NODE_ENV: ${process.env.NODE_ENV || 'development'}`);
+});
+
+// Graceful shutdown (Railway sends SIGTERM on redeploy)
+process.on('SIGTERM', () => {
+  console.log('SIGTERM received — closing server...');
+  httpServer.close(() => process.exit(0));
+});
