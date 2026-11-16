@@ -79,16 +79,16 @@ httpServer.listen(port, '0.0.0.0', () => {
 
 console.log('Railway injected PORT:', process.env.PORT);
 
-// ---- Listen (Railway requires 0.0.0.0 and process.env.PORT) ----
-// const port = process.env.PORT || 3001;
-// httpServer.listen(port, '0.0.0.0', () => {
-//   console.log(`✅ Codenames server listening on 0.0.0.0:${port}`);
-//   console.log(`   CORS origins: ${allowedOrigins === '*' ? '* (open)' : allowedOrigins.join(', ')}`);
-//   console.log(`   NODE_ENV: ${process.env.NODE_ENV || 'development'}`);
-// });
+---- Listen (Railway requires 0.0.0.0 and process.env.PORT) ----
+const port = process.env.PORT || 3001;
+httpServer.listen(port, '0.0.0.0', () => {
+  console.log(`✅ Codenames server listening on 0.0.0.0:${port}`);
+  console.log(`   CORS origins: ${allowedOrigins === '*' ? '* (open)' : allowedOrigins.join(', ')}`);
+  console.log(`   NODE_ENV: ${process.env.NODE_ENV || 'development'}`);
+});
 
-// // Graceful shutdown (Railway sends SIGTERM on redeploy)
-// process.on('SIGTERM', () => {
-//   console.log('SIGTERM received — closing server...');
-//   httpServer.close(() => process.exit(0));
-// });
+// Graceful shutdown (Railway sends SIGTERM on redeploy)
+process.on('SIGTERM', () => {
+  console.log('SIGTERM received — closing server...');
+  httpServer.close(() => process.exit(0));
+});
